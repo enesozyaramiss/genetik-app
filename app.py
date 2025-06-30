@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from gemini_handler import generate_with_gemini
+from clinvar_api import get_clinvar_data  # <--- yeni eklenen API modülü
 
 st.set_page_config(page_title="Genetik Varyant Yorumlama (Gemini)", layout="wide")
 st.title("🧬 Gemini Destekli Genetik Varyant Yorumlama")
@@ -17,28 +18,41 @@ if uploaded_file:
         results = []
 
         for _, row in df.head(5).iterrows():
+            chrom = row["CHROM"]
+            pos = row["POS"]
+            ref = row["REF"]
+            alt = row["ALT"]
+            rsid = str(row.get("ID", "")).replace("rs", "")  # rsID varsa kullan
+
+            # 🔍 ClinVar'dan bilgi çek
+            clinvar_summary = get_clinvar_data(rsid) if rsid else "No ClinVar ID available."
+
+            # 🧠 Prompt oluştur
             prompt = f"""
-You are a clinical geneticist. Use NCBI (https://www.ncbi.nlm.nih.gov/variation/view) as background knowledge.
-Evaluate the following variant:
+You are a clinical geneticist.
 
-Chromosome: {row['CHROM']}
-Position: {row['POS']}
-Reference: {row['REF']}
-Alternate: {row['ALT']}
+Variant Info:
+Chromosome: {chrom}
+Position: {pos}
+Reference: {ref}
+Alternate: {alt}
 
-Indicate:
-- If it is pathogenic, likely pathogenic, benign or unknown
-- Associated disease (if known)
-- Summary from NCBI if available
+ClinVar Info:
+{clinvar_summary}
 
-Please summarize in English.
+Interpret this variant and provide:
+- Likely pathogenicity
+- Associated disease (if any)
+- Clinical relevance
+- Summary (based on ClinVar if available)
 """
+
             result = generate_with_gemini(prompt)
             results.append({
-                "CHROM": row['CHROM'],
-                "POS": row['POS'],
-                "REF": row['REF'],
-                "ALT": row['ALT'],
+                "CHROM": chrom,
+                "POS": pos,
+                "REF": ref,
+                "ALT": alt,
                 "Gemini_Yorum": result
             })
 

@@ -4,13 +4,12 @@ from gemini_handler import generate_with_gemini
 from clinvar_api import get_clinvar_data
 
 def parse_vcf(file):
-    lines = file.readlines()
+    lines = file.getvalue().decode("utf-8").splitlines()
     rows = []
     for line in lines:
-        decoded = line.decode("utf-8")
-        if decoded.startswith("#"):
+        if line.startswith("#"):
             continue  # başlık satırlarını atla
-        parts = decoded.strip().split("\t")
+        parts = line.strip().split("\t")
         if len(parts) >= 5:
             chrom = parts[0]
             pos = parts[1]

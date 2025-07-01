@@ -6,7 +6,7 @@ from gemini_handler import generate_with_gemini  # Bu fonksiyon senin kendi Gemi
 import gzip
 
 
-def parse_vcf_gz(file, start=100, end=110):
+def parse_vcf_gz(file, start=0 , end=100):
     rows = []
     count = 0
 

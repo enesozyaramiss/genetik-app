@@ -10,6 +10,12 @@ from gnomad_handler import get_gnomad_frequencies
 from clingen_handler import load_clingen_validity, get_clingen_classification
 
 
+
+clingen_df = load_clingen_validity("Clingen-Gene-Disease-Summary-2025-07-01.csv")
+
+if clingen_df.empty:
+    st.warning("⚠️ ClinGen verisi yüklenemedi. Dosya eksik olabilir.")
+
 def parse_vcf_gz(uploaded_file, start=0, end=100):
     rows = []
     count = 0

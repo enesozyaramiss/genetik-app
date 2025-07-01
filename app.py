@@ -4,13 +4,17 @@ import requests
 import time
 from gemini_handler import generate_with_gemini  # Bu fonksiyon senin kendi Gemini API 
 import gzip
+import io
+from clinvar_api import get_pubmed_references
+from gnomad_handler import get_gnomad_frequencies
+from clingen_handler import load_clingen_validity, get_clingen_classification
 
 
-def parse_vcf_gz(file, start=0 , end=100):
+def parse_vcf_gz(uploaded_file, start=0, end=100):
     rows = []
     count = 0
 
-    with gzip.open(file, 'rt') as f:  # 'rt' = read text
+    with gzip.open(io.BytesIO(uploaded_file.read()), 'rt') as f:
         for line in f:
             if line.startswith("#"):
                 continue
@@ -32,6 +36,34 @@ def parse_vcf_gz(file, start=0 , end=100):
                 break
 
     return pd.DataFrame(rows)
+
+
+def parse_vcf(uploaded_file, start=0, end=100):
+    rows = []
+    count = 0
+
+    for line in uploaded_file.getvalue().decode("utf-8").splitlines():
+        if line.startswith("#"):
+            continue
+        if count >= start and count < end:
+            parts = line.strip().split("\t")
+            if len(parts) >= 5:
+                chrom = parts[0]
+                pos = parts[1]
+                ref = parts[3]
+                alt = parts[4]
+                rows.append({
+                    "CHROM": chrom,
+                    "POS": pos,
+                    "REF": ref,
+                    "ALT": alt
+                })
+        count += 1
+        if count >= end:
+            break
+
+    return pd.DataFrame(rows)
+
 
 # 🧬 HGVS formatı oluştur
 def create_hgvs(chrom, pos, ref, alt):
@@ -97,7 +129,7 @@ if uploaded_file:
     if st.button("🔎 Gemini ile Yorumla"):
         st.info("Yorumlar oluşturuluyor... Lütfen bekleyin.")
         results = []
-
+        
         for i, row in df.iterrows():
             chrom = row["CHROM"]
             pos = row["POS"]
@@ -107,6 +139,14 @@ if uploaded_file:
             hgvs = create_hgvs(chrom, pos, ref, alt)
             variation_id = get_variation_id(hgvs)
             clinvar = get_clinvar_info(variation_id) if variation_id else {}
+            pubmed_refs = get_pubmed_references(variation_id) if variation_id else []
+            ref_text = "\n".join(pubmed_refs) if pubmed_refs else "No PubMed references found."
+
+            # 🧬 gnomAD frekans bilgisi
+            gnomad = get_gnomad_frequencies(chrom, pos, ref, alt)
+
+             # 🧬 ClinGen sınıflaması
+            clingen_class = get_clingen_classification(clinvar.get("gene", "Yok"), clingen_df)
 
             # 🧠 Gemini prompt
             prompt = f"""
@@ -125,6 +165,18 @@ ClinVar Info:
 - Condition: {clinvar.get("condition", "Yok")}
 - Review Status: {clinvar.get("review_status", "Yok")}
 
+ClinGen Info:
+- Gene-Disease Validity Classification: {clingen_class}
+
+gnomAD Info:
+- Genome Allele Frequency: {gnomad.get("gnomad_genome_af", "Yok")}
+- Exome Allele Frequency: {gnomad.get("gnomad_exome_af", "Yok")}
+
+PubMed References:
+{ref_text}
+
+Use these articles when interpreting the variant above.
+
 Interpret this variant and provide:
 - Likely pathogenicity
 - Associated disease (if any)
@@ -142,8 +194,12 @@ Interpret this variant and provide:
                 "Gene": clinvar.get("gene", "Yok"),
                 "Condition": clinvar.get("condition", "Yok"),
                 "Significance": clinvar.get("clinical_significance", "Yok"),
+                "ClinGen_Validity": clingen_class,
+                "gnomAD_Genome_AF": gnomad.get("gnomad_genome_af", "Yok"),
+                "gnomAD_Exome_AF": gnomad.get("gnomad_exome_af", "Yok"),
                 "Gemini_Yorum": gemini_response
             })
+
 
             time.sleep(0.34)  # NCBI rate-limit güvenliği
 

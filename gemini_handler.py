@@ -9,5 +9,8 @@ genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
 def generate_with_gemini(prompt):
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = model.generate_content(prompt)
+        return response.text or "🛑 Yanıt alınamadı."
+    except Exception as e:
+        return f"❌ Hata oluştu: {e}"

@@ -3,6 +3,7 @@
 Bu kaynaklar, varyantların anlamlandırılmasında altın standart kabul edilir:
 
 Kaynak	Amaç	API Var mı?	Entegrasyon Durumu
+<<<<<<< HEAD
 ClinVar	Klinik anlam (patogenic, benign vs)	✅	✅
 OMIM	Genetik hastalıklar & genler ilişkisi	⚠️ (Sınırlı)	🔜
 PubMed	Bilimsel makaleler, literatür	✅ (Entrez)	🔜
@@ -11,6 +12,16 @@ ClinGen	Gen-hastalık geçerliliği, uzman kurulu notları	⚠️ (XML ağırlı
 
 🔹 2. Yeni Özellikler (MVP+ Plan)
  REF, ALT, CHROM, POS üzerinden HGVS string otomatik üretimi
+=======
+ClinVar	Klinik anlam (patogenic, benign vs)	✅	✅ (OK)
+ClinGen	Gen-hastalık geçerliliği, uzman kurulu notları	⚠️ (XML ağırlıklı)	🔜 (OK)
+OMIM	Genetik hastalıklar & genler ilişkisi	⚠️ (Sınırlı)	🔜
+PubMed	Bilimsel makaleler, literatür	✅ (Entrez)	🔜
+gnomAD	Popülasyon varyant sıklıkları	✅ (GraphQL)	🔜
+
+
+🔹 2. Yeni Özellikler (MVP+ Plan)
+>>>>>>> f59c22f (İlk commit: Genetik varyant analiz uygulaması)
 
  Gemini yerine BioGPT / ChatDoctor gibi open-source modellerle lokal yorumlama (offline mod)
 

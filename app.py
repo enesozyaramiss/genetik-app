@@ -5,7 +5,12 @@ import io
 import time
 
 from gemini_handler import generate_with_gemini
+<<<<<<< HEAD
 from clingen_handler import load_clingen_validity, get_clingen_classification
+=======
+from clingen_handler import load_clingen_validity, get_clingen_classification, clean_gene_symbol
+from pubmed_handler import get_pubmed_ids_from_clinvar, build_pubmed_links
+>>>>>>> f59c22f (İlk commit: Genetik varyant analiz uygulaması)
 
 # 📦 ClinVar verisi (önceden hazırlanmış Parquet formatında)
 clinvar_df = pd.read_parquet("clinvar_subset.parquet")
@@ -78,10 +83,25 @@ if uploaded_file:
             results = []
 
             merged_df = pd.merge(df, clinvar_df, on=["CHROM", "POS", "REF", "ALT"], how="left")
+<<<<<<< HEAD
             merged_df["ClinGen_Validity"] = merged_df["GENE"].apply(lambda g: get_clingen_classification(g, clingen_df))
 
             for i, row in merged_df.iterrows():
                 st.write(f"🔍 {i+1}. varyant işleniyor: {row['CHROM']}:{row['POS']} {row['REF']}>{row['ALT']}")
+=======
+            merged_df["GENE_CLEAN"] = merged_df["GENE"].apply(clean_gene_symbol)
+            merged_df["ClinGen_Validity"] = merged_df["GENE_CLEAN"].apply(lambda g: get_clingen_classification(g, clingen_df))
+            st.write("🧬 merged_df sütunları:", merged_df.columns.tolist())
+            st.write("📋 merged_df ilk 10 satır:")
+            st.write(merged_df.head(10))
+
+
+            for i, row in merged_df.iterrows():
+                st.write(f"🔍 {i+1}. varyant işleniyor: {row['CHROM']}:{row['POS']} {row['REF']}>{row['ALT']}")
+
+                pubmed_ids = get_pubmed_ids_from_clinvar(row['ID']) if not pd.isna(row['ID']) else []
+                pubmed_links = build_pubmed_links(pubmed_ids)
+>>>>>>> f59c22f (İlk commit: Genetik varyant analiz uygulaması)
                 
                 prompt = f"""
 You are a clinical geneticist.
@@ -100,6 +120,12 @@ ClinVar Info:
 ClinGen Info:
 - Gene-Disease Validity Classification: {row.get('ClinGen_Validity', 'Yok')}
 
+<<<<<<< HEAD
+=======
+PubMed Articles:
+- {', '.join(pubmed_links) if pubmed_links else 'Yok'}
+
+>>>>>>> f59c22f (İlk commit: Genetik varyant analiz uygulaması)
 Interpret this variant and provide:
 - Likely pathogenicity
 - Associated disease (if any)
@@ -110,8 +136,13 @@ Interpret this variant and provide:
                     yorum = generate_with_gemini(prompt)
                 except Exception as e:
                     yorum = f"❌ Hata: {str(e)}"
+<<<<<<< HEAD
                 
                 results.append({**row, "Gemini_Yorum": yorum})
+=======
+
+                results.append({**row, "PubMed_Links": pubmed_links, "Gemini_Yorum": yorum})
+>>>>>>> f59c22f (İlk commit: Genetik varyant analiz uygulaması)
                 time.sleep(0.4)
 
         st.success("✅ Yorumlama tamamlandı!")

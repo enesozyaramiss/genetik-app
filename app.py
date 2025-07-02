@@ -5,7 +5,6 @@ import io
 import time
 
 from clinvar_parser import enrich_clinvar_df
-
 from gemini_handler import generate_with_gemini
 from clingen_handler import load_clingen_validity, get_clingen_classification
 from pubmed_handler import get_pubmed_ids_from_clinvar, build_pubmed_links
@@ -20,7 +19,7 @@ clingen_df = load_clingen_validity("Clingen-Gene-Disease-Summary-2025-07-01.csv"
 
 
 # 📥 VCF.GZ Dosyasını Oku
-def parse_vcf_gz(uploaded_file, start=0, end=50):
+def parse_vcf_gz(uploaded_file, start=0, end=2000):
     rows = []
     data_row_index = 0
     with gzip.open(io.BytesIO(uploaded_file.read()), 'rt') as f:
@@ -42,7 +41,7 @@ def parse_vcf_gz(uploaded_file, start=0, end=50):
     return pd.DataFrame(rows)
 
 # 📥 Düz VCF Dosyasını Oku
-def parse_vcf(uploaded_file, start=0, end=50):
+def parse_vcf(uploaded_file, start=0, end=2000):
     rows = []
     data_row_index = 0
     for line in uploaded_file.getvalue().decode("utf-8").splitlines():
@@ -76,9 +75,6 @@ if uploaded_file:
     else:
         df = pd.read_csv(uploaded_file)
 
-    st.write("📄 Yüklenmiş Veriler (İlk 100 Satır):")
-    st.dataframe(df.head(100))
-
     if st.button("🔎 Gemini ile Yorumla"):
         with st.spinner("🧠 Gemini yorumluyor... Lütfen bekleyin."):
             results = []
@@ -90,11 +86,12 @@ if uploaded_file:
                 clinvar_df[col] = clinvar_df[col].astype(str)
             merged_df = pd.merge(df, clinvar_df, on=["CHROM", "POS", "REF", "ALT"], how="left")
             merged_df["ClinGen_Validity"] = merged_df["GENE"].apply(lambda g: get_clingen_classification(g, clingen_df))
-            st.write("🧬 merged_df sütunları:", merged_df.columns.tolist())
-            st.write("📋 merged_df ilk 10 satır:")
-            st.write(merged_df.head(10))
 
-            for i, row in merged_df.iterrows():
+            matched_df = merged_df[~merged_df["ID"].isna()].copy()
+            st.write(f"✅ Eşleşen varyant sayısı: {len(matched_df)}")
+            st.dataframe(matched_df.head(50))
+
+            for i, row in matched_df.iterrows():
                 st.write(f"🔍 {i+1}. varyant işleniyor: {row['CHROM']}:{row['POS']} {row['REF']}>{row['ALT']}")
 
                 variation_id = row.get("ID")
@@ -110,6 +107,7 @@ if uploaded_file:
                         st.write(f"⚠️ PubMed ID sorgusunda hata: {e}")
 
                 pubmed_links = build_pubmed_links(pubmed_ids)
+
                 
                 prompt = f"""
 You are a clinical geneticist.

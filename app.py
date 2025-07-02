@@ -4,15 +4,20 @@ import gzip
 import io
 import time
 
+from clinvar_parser import enrich_clinvar_df
+
 from gemini_handler import generate_with_gemini
-from clingen_handler import load_clingen_validity, get_clingen_classification, clean_gene_symbol
+from clingen_handler import load_clingen_validity, get_clingen_classification
 from pubmed_handler import get_pubmed_ids_from_clinvar, build_pubmed_links
 
 # 📦 ClinVar verisi (önceden hazırlanmış Parquet formatında)
-clinvar_df = pd.read_parquet("clinvar_subset.parquet")
+clinvar_df = pd.read_parquet("sampled_100.parquet")
+clinvar_df = enrich_clinvar_df(clinvar_df)
+
 
 # 🧬 ClinGen verisini yükle
 clingen_df = load_clingen_validity("Clingen-Gene-Disease-Summary-2025-07-01.csv")
+
 
 # 📥 VCF.GZ Dosyasını Oku
 def parse_vcf_gz(uploaded_file, start=0, end=50):
@@ -78,18 +83,32 @@ if uploaded_file:
         with st.spinner("🧠 Gemini yorumluyor... Lütfen bekleyin."):
             results = []
 
+
+            # Tüm merge edilecek sütunları aynı tipe dönüştür
+            for col in ["CHROM", "POS", "REF", "ALT"]:
+                df[col] = df[col].astype(str)
+                clinvar_df[col] = clinvar_df[col].astype(str)
             merged_df = pd.merge(df, clinvar_df, on=["CHROM", "POS", "REF", "ALT"], how="left")
-            merged_df["GENE_CLEAN"] = merged_df["GENE"].apply(clean_gene_symbol)
-            merged_df["ClinGen_Validity"] = merged_df["GENE_CLEAN"].apply(lambda g: get_clingen_classification(g, clingen_df))
+            merged_df["ClinGen_Validity"] = merged_df["GENE"].apply(lambda g: get_clingen_classification(g, clingen_df))
             st.write("🧬 merged_df sütunları:", merged_df.columns.tolist())
             st.write("📋 merged_df ilk 10 satır:")
             st.write(merged_df.head(10))
 
-
             for i, row in merged_df.iterrows():
                 st.write(f"🔍 {i+1}. varyant işleniyor: {row['CHROM']}:{row['POS']} {row['REF']}>{row['ALT']}")
 
-                pubmed_ids = get_pubmed_ids_from_clinvar(row['ID']) if not pd.isna(row['ID']) else []
+                variation_id = row.get("ID")
+                if pd.isna(variation_id):
+                    pubmed_ids = []
+                    st.write("ℹ️ ID boş, PubMed eşlemesi yapılmadı.")
+                else:
+                    try:
+                        variation_id = str(int(variation_id))  # float -> int -> str
+                        pubmed_ids = get_pubmed_ids_from_clinvar(variation_id)
+                    except Exception as e:
+                        pubmed_ids = []
+                        st.write(f"⚠️ PubMed ID sorgusunda hata: {e}")
+
                 pubmed_links = build_pubmed_links(pubmed_ids)
                 
                 prompt = f"""

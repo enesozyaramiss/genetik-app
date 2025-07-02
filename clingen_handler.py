@@ -17,7 +17,3 @@ def get_clingen_classification(gene_symbol, df_clingen):
         return gene_row.iloc[0]["CLASSIFICATION"]
     return "Yok"
 
-def clean_gene_symbol(gene_field):
-    if pd.isna(gene_field):
-        return "Yok"
-    return gene_field.split("|")[0].split(":")[0].strip()

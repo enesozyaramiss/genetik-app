@@ -1,49 +1,52 @@
+API KEY = ""
 mkdir .streamlit
 notepad secrets.toml
 
-🧭 Yol Haritası
-🔹 1. Temel Klinik Veritabanı Entegrasyonu
-Bu kaynaklar, varyantların anlamlandırılmasında altın standart kabul edilir:
+# Gemini-Powered Genetic Variant Interpretation
 
-Kaynak	Amaç	API Var mı?	Entegrasyon Durumu
-ClinVar	Klinik anlam (patogenic, benign vs)	✅	✅ (OK)
-ClinGen	Gen-hastalık geçerliliği, uzman kurulu notları	⚠️ (XML ağırlıklı)	🔜 (OK)
-OMIM	Genetik hastalıklar & genler ilişkisi	⚠️ (Sınırlı)	🔜
-PubMed	Bilimsel makaleler, literatür	✅ (Entrez)	🔜
-gnomAD	Popülasyon varyant sıklıkları	✅ (GraphQL)	🔜
+A Streamlit application that integrates ClinVar, ClinGen and gnomAD data to annotate genetic variants from a VCF file, fetch relevant PubMed literature, retrieve allele frequency statistics via gnomAD’s GraphQL API, and generate concise clinical summaries using the Gemini LLM.
 
+---
 
-🔹 2. Yeni Özellikler (MVP+ Plan)
+## Features
 
- Gemini yerine BioGPT / ChatDoctor gibi open-source modellerle lokal yorumlama (offline mod)
+- **VCF/VCF.GZ/CSV Input**  
+  Upload your variant file; parses the first 200–300 records automatically.
+- **ClinVar Annotation**  
+  Extracts GENE, CLNSIG (clinical significance), DISEASE, RS, CLNVC, CLNHGVS, CLNREVSTAT from INFO fields.
+- **ClinGen Validity**  
+  Classifies gene–disease validity using the ClinGen CSV resource.
+- **PubMed Links**  
+  Retrieves PubMed IDs for each ClinVar Variation ID and builds clickable links.
+- **gnomAD Frequency Data**  
+  Queries the gnomAD GraphQL API for exome AC/AN and PopMax allele frequency/population.
+- **Gemini LLM Interpretation**  
+  Feeds all annotations into Gemini to produce a professional clinical interpretation and plain-language summary.
 
- Gelişmiş filtreleme (örneğin: sadece "Pathogenic" olanlar)
+---
 
- Kullanıcının yüklediği dosyanın özet istatistiklerini göster (kaç tane varyant, hangi kromozomda yoğunluk var, vs.)
+Create and activate a virtual environment:
 
-🔹 3. Performans İyileştirme
- Çok büyük dosyalar için async / queue kullanımı
+bash
+python -m venv venv
+source venv/bin/activate     # macOS/Linux
+venv\Scripts\activate        # Windows
 
- Streamlit yerine FastAPI + React mimarisi (yüksek trafik için)
+Install dependencies:
+pip install -r requirements.txt
 
- Arka planda işlem yapma ve progress bar gösterme
+Run the Streamlit app:
+streamlit run app.py
 
-🔹 4. Veri Güvenliği ve Altyapı
- streamlit.secrets → .env dosyasına geçiş (daha temiz kontrol)
+File Structure
+├── app.py                   # Streamlit UI and main workflow
+├── clinvar_parser.py        # ClinVar INFO parsing & gnomAD link generator
+├── clingen_handler.py       # ClinGen CSV loader & classification
+├── pubmed_handler.py        # PubMed ID fetcher & link builder
+├── gemini_handler.py        # Gemini LLM integration
+├── requirements.txt         # Python dependencies
+├── README.md                # Project overview (this file)
+└── LICENSE                  # MIT License
 
- logging altyapısı (hataları logla)
-
- Kullanıcı dosyalarını otomatik silme (GDPR uyumu)
-
-🚀 Türkiye'de Bu Alanda Nasıl Öne Çıkarsın?
-Türkçe destekli klinik varyant yorumlayıcı sistemi geliştir (çünkü şu an sadece İngilizce var)
-
-Open Source GitHub projesi yap, arkasında dur (yüksek görünürlük)
-
-LinkedIn / Medium / YouTube üzerinden örnek vakalarla projeyi anlat
-
-Klinik genetik merkezleri veya özel hastanelere MVP sun
-
-Tıp fakülteleriyle iş birliği teklif et: varyant analiz eğitimi veya staj altyapısı
-
-Hedef: “Türkiye’nin ilk açık varyant analiz aracı” konumlaması# genetik
+## License
+This project is licensed under the MIT License

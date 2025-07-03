@@ -1,6 +1,10 @@
 import pandas as pd
 import re
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def extract_gene(info_str):
     if pd.isna(info_str):
@@ -75,7 +79,7 @@ def fetch_gnomad_simple(chrom, pos, ref, alt, genome_build="GRCh38"):
       "Exome_AN": int,
       "PopMax_AF": float,
       "PopMax_Pop": str
-    } ya da hata/eksikse boş dict.
+    } ya da hata/eksikse {'error': str}
     """
     url = "https://gnomad.broadinstitute.org/api"
     query = """
@@ -92,13 +96,24 @@ def fetch_gnomad_simple(chrom, pos, ref, alt, genome_build="GRCh38"):
     vid = f"{chrom}-{pos}-{ref}-{alt}"
     try:
         resp = requests.post(url, json={"query": query, "variables": {"variantId": vid}}, timeout=10)
+        resp.raise_for_status()
         data = resp.json().get("data", {}).get("variant")
-        ex = data.get("exome", {}) if data else {}
+        if data is None:
+            logger.warning(f"No data returned for gnomAD variant {vid}")
+            return {'error': 'No data returned'}
+        ex = data.get("exome", {})
         return {
             "Exome_AC": ex.get("ac"),
             "Exome_AN": ex.get("an"),
             "PopMax_AF": ex.get("faf95", {}).get("popmax"),
             "PopMax_Pop": ex.get("faf95", {}).get("popmax_population"),
         }
-    except:
-        return {}
+    except requests.exceptions.RequestException as req_err:
+        logger.error(f"HTTP error fetching gnomAD stats for {vid}: {req_err}")
+        return {'error': f"HTTP error: {req_err}"}
+    except ValueError as val_err:
+        logger.error(f"JSON decode error for gnomAD response {vid}: {val_err}")
+        return {'error': f"JSON decode error: {val_err}"}
+    except Exception as e:
+        logger.error(f"Unexpected error in gnomAD handler for {vid}: {e}")
+        return {'error': f"Unexpected error: {e}"}

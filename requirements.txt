@@ -1,4 +1,4 @@
 streamlit
 pandas
-google-generativeai
 streamlit_option_menu
+google-generativeai

@@ -3,7 +3,10 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import pandas as pd
 import gzip, io, time
+
 from functools import lru_cache
+
+
 from clinvar_parser import enrich_clinvar_df, add_gnomad_links, fetch_gnomad_simple
 from gemini_handler import generate_with_gemini
 from clingen_handler import load_clingen_validity, get_clingen_classification
@@ -142,9 +145,16 @@ if uploaded:
             st.write(f"✅ Eşleşen varyant sayısı: {len(matched)}")
             st.dataframe(matched.head(30))
 
+            status = st.empty()
+            overall_pb = st.progress(0)
+            total = len(matched)
+
             results=[]
             for i, row in matched.iterrows():
-                st.write(f"🔍 {i+1}. {row['CHROM']}:{row['POS']} {row['REF']}>{row['ALT']}")
+                idx = i + 1
+
+                status.markdown(f"### 🔍 Processing variant {idx}/{total}:  "
+                    f"{row['CHROM']}:{row['POS']} {row['REF']}>{row['ALT']}")
 
                 # PubMed (cache’li)
                 pm_response = get_pubmed_ids_cached(str(int(row["ID"])))
@@ -190,10 +200,10 @@ st.write(f"📚 PubMed: {', '.join(pmids) if pmids else 'None'}")
                     yorum = generate_with_gemini(prompt, api_key=api_key)
                 except Exception as e:
                     yorum = f"❌ {e}"
-
+                pubmed_links = build_pubmed_links(pmids)  # URL'leri oluştur
                 results.append({
                     **row.to_dict(),
-                    "PubMed_Links": pmids,
+                    "PubMed_Links": ", ".join(pubmed_links),
                     **stats,
                     "Gemini_Yorum": yorum
                 })

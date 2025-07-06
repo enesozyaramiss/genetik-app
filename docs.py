@@ -496,7 +496,7 @@ def show_documentation():
     Bu uygulama açık kaynak topluluğu ve bilimsel veritabanları sayesinde mümkün olmuştur.
     
     ---
-    *Son güncelleme: Ocak 2025*
+    *Son güncelleme: Temmuz 2025*
     """)
 
     # Sayfa sonu
